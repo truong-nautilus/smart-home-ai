@@ -12,6 +12,7 @@ import (
 	"github.com/truong-nautilus/smart-home-ai/internal/infrastructure/media"
 	"github.com/truong-nautilus/smart-home-ai/internal/infrastructure/ollama"
 	"github.com/truong-nautilus/smart-home-ai/internal/infrastructure/phowhisper"
+	"github.com/truong-nautilus/smart-home-ai/internal/infrastructure/wav2vec2"
 	"github.com/truong-nautilus/smart-home-ai/internal/usecase"
 	"github.com/truong-nautilus/smart-home-ai/pkg/logger"
 )
@@ -26,13 +27,29 @@ func main() {
 	consoleLogger := logger.NewConsoleLogger()
 	ffmpeg := media.NewFFmpegCapturer()
 
-	// PhoWhisper recognizer (vinai/PhoWhisper-small - tối ưu cho tiếng Việt)
-	phowhisperScript := os.Getenv("PHOWHISPER_SCRIPT")
-	if phowhisperScript == "" {
-		// Sử dụng đường dẫn tuyệt đối
-		phowhisperScript = "/Users/phamthetruong/github/smart-home-ai/scripts/phowhisper_transcribe.py"
+	// Speech recognizer - chọn giữa PhoWhisper hoặc Wav2Vec2
+	asrModel := os.Getenv("ASR_MODEL")
+	if asrModel == "" {
+		asrModel = "phowhisper" // mặc định
 	}
-	recognizer := phowhisper.NewPhoWhisperRecognizer(phowhisperScript)
+
+	var recognizer *phowhisper.PhoWhisperRecognizer
+	var wav2vec2Recognizer *wav2vec2.Wav2Vec2Recognizer
+
+	if asrModel == "wav2vec2" {
+		// Wav2Vec2 recognizer (fast Vietnamese CTC model)
+		wav2vec2Script := "/Users/phamthetruong/github/smart-home-ai/scripts/wav2vec2_transcribe.py"
+		wav2vec2Recognizer = wav2vec2.NewWav2Vec2Recognizer(wav2vec2Script)
+		consoleLogger.Info("🎤 Sử dụng Wav2Vec2 ASR")
+	} else {
+		// PhoWhisper recognizer (vinai/PhoWhisper - tối ưu cho tiếng Việt)
+		phowhisperScript := os.Getenv("PHOWHISPER_SCRIPT")
+		if phowhisperScript == "" {
+			phowhisperScript = "/Users/phamthetruong/github/smart-home-ai/scripts/phowhisper_transcribe.py"
+		}
+		recognizer = phowhisper.NewPhoWhisperRecognizer(phowhisperScript)
+		consoleLogger.Info("🎤 Sử dụng PhoWhisper ASR")
+	}
 
 	// Ollama local model
 	ollamaModel := os.Getenv("OLLAMA_MODEL")
@@ -50,14 +67,26 @@ func main() {
 	keyboardListener := keyboard.NewListener()
 
 	// Use case (với keyboard listener)
-	assistant := usecase.NewAssistantUseCase(
-		ffmpeg,           // media capturer
-		recognizer,       // speech recognizer (PhoWhisper)
-		aiClient,         // ai assistant (ollama)
-		synthesizer,      // speech synthesizer (Edge TTS)
-		keyboardListener, // keyboard listener (Enter key)
-		consoleLogger,
-	)
+	var assistant *usecase.AssistantUseCase
+	if wav2vec2Recognizer != nil {
+		assistant = usecase.NewAssistantUseCase(
+			ffmpeg,             // media capturer
+			wav2vec2Recognizer, // speech recognizer (Wav2Vec2)
+			aiClient,           // ai assistant (ollama)
+			synthesizer,        // speech synthesizer (Edge TTS)
+			keyboardListener,   // keyboard listener (Enter key)
+			consoleLogger,
+		)
+	} else {
+		assistant = usecase.NewAssistantUseCase(
+			ffmpeg,           // media capturer
+			recognizer,       // speech recognizer (PhoWhisper)
+			aiClient,         // ai assistant (ollama)
+			synthesizer,      // speech synthesizer (Edge TTS)
+			keyboardListener, // keyboard listener (Enter key)
+			consoleLogger,
+		)
+	}
 
 	// Thực thi vô hạn - chế độ press twice
 	ctx := context.Background()

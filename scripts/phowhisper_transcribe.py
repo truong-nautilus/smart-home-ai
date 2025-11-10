@@ -10,37 +10,50 @@ import os
 # Tắt tất cả warnings và logging
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
 os.environ['TRANSFORMERS_VERBOSITY'] = 'error'
+os.environ['TOKENIZERS_PARALLELISM'] = 'false'  # Tránh warning
 import warnings
 warnings.filterwarnings('ignore')
+
+# Cache pipeline globally để không phải load lại
+_pipeline_cache = None
+
+def get_pipeline():
+    """Get or create cached pipeline"""
+    global _pipeline_cache
+    if _pipeline_cache is None:
+        from transformers import pipeline
+        import torch
+        
+        device = "cuda:0" if torch.cuda.is_available() else "cpu"
+        torch_dtype = torch.float16 if torch.cuda.is_available() else torch.float32
+        model_id = os.getenv("PHOWHISPER_MODEL", "vinai/PhoWhisper-small")
+        
+        _pipeline_cache = pipeline(
+            "automatic-speech-recognition",
+            model=model_id,
+            torch_dtype=torch_dtype,
+            device=device,
+        )
+    return _pipeline_cache
 
 def transcribe_audio(audio_path: str) -> str:
     """Transcribe audio file using PhoWhisper"""
     try:
-        from transformers import pipeline
-        import torch
+        # Sử dụng cached pipeline
+        pipe = get_pipeline()
         
-        # Kiểm tra GPU/CPU
-        device = "cuda:0" if torch.cuda.is_available() else "cpu"
-        torch_dtype = torch.float16 if torch.cuda.is_available() else torch.float32
-        
-        # Load PhoWhisper model
-        # Model này được tối ưu cho tiếng Việt, cho kết quả tốt hơn Whisper gốc
-        model_id = os.getenv("PHOWHISPER_MODEL", "vinai/PhoWhisper-small")
-        
-        pipe = pipeline(
-            "automatic-speech-recognition",
-            model=model_id,
-            dtype=torch_dtype,  # Sử dụng dtype thay vì torch_dtype
-            device=device,
-        )
-        
-        # Transcribe
+        # Transcribe với tối ưu tốc độ
+        # Bỏ chunk_length_s cho audio ngắn để xử lý nhanh hơn
         result = pipe(
             audio_path,
-            chunk_length_s=30,  # Xử lý từng đoạn 30 giây
-            batch_size=8,       # Batch size tùy theo RAM/VRAM
             return_timestamps=False,
-            generate_kwargs={"language": "vietnamese", "task": "transcribe"},
+            generate_kwargs={
+                "language": "vietnamese", 
+                "task": "transcribe",
+                "num_beams": 1,              # Greedy decoding - nhanh nhất
+                "do_sample": False,           # Không sampling - deterministic
+                "max_length": 448,            # Giới hạn độ dài output
+            },
         )
         
         transcription = result["text"].strip()

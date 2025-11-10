@@ -30,12 +30,14 @@ func (r *Wav2Vec2Recognizer) Transcribe(ctx context.Context, audioPath string) (
 		return nil, fmt.Errorf("không thể resolve audio path: %w", err)
 	}
 
-	// Gọi Python script (script có shebang nên chạy trực tiếp được)
-	cmd := exec.CommandContext(ctx, r.scriptPath, absPath)
+	// Gọi Python script với Python interpreter từ virtual environment
+	pythonPath := "/Users/phamthetruong/phowhisper-env/bin/python3"
+	cmd := exec.CommandContext(ctx, pythonPath, r.scriptPath, absPath)
 
-	output, err := cmd.CombinedOutput()
+	// Chỉ lấy stdout, stderr để riêng (tránh logging lẫn với kết quả)
+	output, err := cmd.Output()
 	if err != nil {
-		return nil, fmt.Errorf("Wav2Vec2 error: %w\nOutput: %s", err, string(output))
+		return nil, fmt.Errorf("Wav2Vec2 error: %w", err)
 	}
 
 	text := strings.TrimSpace(string(output))
