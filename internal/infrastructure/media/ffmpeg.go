@@ -10,8 +10,9 @@ import (
 
 // FFmpegCapturer triển khai MediaCapturer sử dụng FFmpeg
 type FFmpegCapturer struct {
-	recordingCmd *exec.Cmd
-	recordingMu  sync.Mutex
+	recordingCmd  *exec.Cmd
+	recordingMu   sync.Mutex
+	recordingDone chan struct{}
 }
 
 // NewFFmpegCapturer tạo FFmpeg capturer mới
@@ -57,11 +58,11 @@ func (f *FFmpegCapturer) RecordAudio(ctx context.Context, outputPath string, dur
 // Ghi âm sẽ tiếp tục cho đến khi StopRecording() được gọi hoặc context bị cancel
 func (f *FFmpegCapturer) StartRecording(ctx context.Context, outputPath string) (context.CancelFunc, error) {
 	f.recordingMu.Lock()
-	defer f.recordingMu.Unlock()
-
 	if f.recordingCmd != nil {
+		f.recordingMu.Unlock()
 		return nil, fmt.Errorf("đang có recording đang chạy")
 	}
+	f.recordingMu.Unlock()
 
 	// Tạo context có thể cancel
 	recordCtx, cancel := context.WithCancel(ctx)
@@ -72,12 +73,15 @@ func (f *FFmpegCapturer) StartRecording(ctx context.Context, outputPath string) 
 		"ffmpeg",
 		"-f", "avfoundation",
 		"-i", ":0", // :0 là microphone tích hợp
-		"-ac", "1",     // Mono
+		"-ac", "1", // Mono
 		"-ar", "16000", // 16kHz sample rate
-		"-y",           // Ghi đè file output
+		"-y", // Ghi đè file output
 		outputPath,
 	)
 	cmd.Stderr = os.Stderr
+
+	// Tạo channel để signal khi recording xong
+	done := make(chan struct{})
 
 	// Start recording
 	if err := cmd.Start(); err != nil {
@@ -85,14 +89,15 @@ func (f *FFmpegCapturer) StartRecording(ctx context.Context, outputPath string) 
 		return nil, fmt.Errorf("không thể bắt đầu ghi âm: %w", err)
 	}
 
+	f.recordingMu.Lock()
 	f.recordingCmd = cmd
+	f.recordingDone = done
+	f.recordingMu.Unlock()
 
 	// Chạy goroutine để chờ command hoàn thành
 	go func() {
 		cmd.Wait()
-		f.recordingMu.Lock()
-		f.recordingCmd = nil
-		f.recordingMu.Unlock()
+		close(done) // Signal rằng recording đã xong
 	}()
 
 	return cancel, nil
@@ -101,21 +106,28 @@ func (f *FFmpegCapturer) StartRecording(ctx context.Context, outputPath string) 
 // StopRecording dừng recording đang chạy
 func (f *FFmpegCapturer) StopRecording() error {
 	f.recordingMu.Lock()
-	defer f.recordingMu.Unlock()
+	cmd := f.recordingCmd
+	done := f.recordingDone
+	f.recordingMu.Unlock()
 
-	if f.recordingCmd == nil {
+	if cmd == nil {
 		return fmt.Errorf("không có recording nào đang chạy")
 	}
 
 	// Gửi signal SIGTERM để FFmpeg kết thúc gracefully
-	if err := f.recordingCmd.Process.Signal(os.Interrupt); err != nil {
+	if err := cmd.Process.Signal(os.Interrupt); err != nil {
 		// Nếu SIGTERM fail, thử SIGKILL
-		f.recordingCmd.Process.Kill()
+		cmd.Process.Kill()
 	}
 
-	// Đợi process kết thúc
-	f.recordingCmd.Wait()
+	// Đợi process kết thúc (không giữ mutex)
+	<-done
+
+	// Cleanup sau khi process đã xong
+	f.recordingMu.Lock()
 	f.recordingCmd = nil
+	f.recordingDone = nil
+	f.recordingMu.Unlock()
 
 	return nil
 }
@@ -125,8 +137,8 @@ func (f *FFmpegCapturer) PlayAudio(ctx context.Context, audioPath string) error 
 	cmd := exec.CommandContext(
 		ctx,
 		"ffplay",
-		"-nodisp",   // Không hiển thị video
-		"-autoexit", // Thoát khi phát xong
+		"-nodisp",            // Không hiển thị video
+		"-autoexit",          // Thoát khi phát xong
 		"-loglevel", "quiet", // Tắt log ffplay
 		audioPath,
 	)

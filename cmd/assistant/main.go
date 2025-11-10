@@ -11,7 +11,7 @@ import (
 	"github.com/truong-nautilus/smart-home-ai/internal/infrastructure/keyboard"
 	"github.com/truong-nautilus/smart-home-ai/internal/infrastructure/media"
 	"github.com/truong-nautilus/smart-home-ai/internal/infrastructure/ollama"
-	"github.com/truong-nautilus/smart-home-ai/internal/infrastructure/whispercpp"
+	"github.com/truong-nautilus/smart-home-ai/internal/infrastructure/phowhisper"
 	"github.com/truong-nautilus/smart-home-ai/internal/usecase"
 	"github.com/truong-nautilus/smart-home-ai/pkg/logger"
 )
@@ -26,10 +26,13 @@ func main() {
 	consoleLogger := logger.NewConsoleLogger()
 	ffmpeg := media.NewFFmpegCapturer()
 
-	// Whisper.cpp recognizer (local). Nếu cần, chỉnh path của binary và model qua .env
-	whisperBin := os.Getenv("WHISPER_CPP_BIN") // optional
-	whisperModel := os.Getenv("WHISPER_CPP_MODEL")
-	recognizer := whispercpp.New(whisperBin, whisperModel)
+	// PhoWhisper recognizer (vinai/PhoWhisper-small - tối ưu cho tiếng Việt)
+	phowhisperScript := os.Getenv("PHOWHISPER_SCRIPT")
+	if phowhisperScript == "" {
+		// Sử dụng đường dẫn tuyệt đối
+		phowhisperScript = "/Users/phamthetruong/github/smart-home-ai/scripts/phowhisper_transcribe.py"
+	}
+	recognizer := phowhisper.NewPhoWhisperRecognizer(phowhisperScript)
 
 	// Ollama local model
 	ollamaModel := os.Getenv("OLLAMA_MODEL")
@@ -49,10 +52,10 @@ func main() {
 	// Use case (với keyboard listener)
 	assistant := usecase.NewAssistantUseCase(
 		ffmpeg,           // media capturer
-		recognizer,       // speech recognizer (whisper.cpp)
+		recognizer,       // speech recognizer (PhoWhisper)
 		aiClient,         // ai assistant (ollama)
 		synthesizer,      // speech synthesizer (Edge TTS)
-		keyboardListener, // keyboard listener (Space key)
+		keyboardListener, // keyboard listener (Enter key)
 		consoleLogger,
 	)
 

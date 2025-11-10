@@ -33,6 +33,16 @@ func (w *WhisperCPPRecognizer) Transcribe(ctx context.Context, audioPath string)
 	}
 	// Thêm language hint cho tiếng Việt
 	args = append(args, "-l", "vi")
+	// Tối ưu cho large-v3 model (mạnh nhất)
+	args = append(args, "--temperature", "0.0")    // Giảm randomness, tăng consistency
+	args = append(args, "--best-of", "5")          // Thử 5 beam và chọn tốt nhất
+	args = append(args, "--beam-size", "5")        // Beam search width
+	args = append(args, "--entropy-thold", "2.4")  // Entropy threshold cho quality
+	args = append(args, "--logprob-thold", "-1.0") // Log probability threshold
+	args = append(args, "--max-len", "0")          // Không giới hạn độ dài
+	args = append(args, "--word-thold", "0.01")    // Threshold thấp cho word detection
+	// Prompt tự nhiên cho giao tiếp
+	args = append(args, "--prompt", "Đây là cuộc trò chuyện bằng tiếng Việt")
 	args = append(args, "-f", audioPath)
 
 	cmd := exec.CommandContext(ctx, w.Binary, args...)
@@ -59,10 +69,15 @@ func (w *WhisperCPPRecognizer) Transcribe(ctx context.Context, audioPath string)
 		return nil, fmt.Errorf("whisper: command failed: %w", err)
 	}
 
-	text := strings.TrimSpace(sb.String())
-	if text == "" {
+	rawText := strings.TrimSpace(sb.String())
+	if rawText == "" {
 		return nil, fmt.Errorf("whisper: no transcription produced")
 	}
+
+	// Extract text content (loại bỏ timestamp nếu có)
+	text := extractTextContent(rawText)
+
+	// Không sử dụng post-processing - tin tưởng vào medium model
 
 	return &domain.Transcription{
 		Text:      text,
@@ -70,4 +85,15 @@ func (w *WhisperCPPRecognizer) Transcribe(ctx context.Context, audioPath string)
 		Duration:  0,
 		Timestamp: time.Now(),
 	}, nil
+}
+
+// extractTextContent lấy nội dung text từ output của Whisper (loại bỏ timestamp)
+func extractTextContent(raw string) string {
+	// Format: "[00:00:00.000 --> 00:00:02.000]   Text content"
+	// Tìm dấu "]" cuối cùng và lấy phần sau
+	idx := strings.LastIndex(raw, "]")
+	if idx == -1 {
+		return raw // Không có timestamp, trả về nguyên bản
+	}
+	return strings.TrimSpace(raw[idx+1:])
 }

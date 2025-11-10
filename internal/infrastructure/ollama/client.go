@@ -28,14 +28,18 @@ func New(model string) *OllamaClient {
 func (o *OllamaClient) AnalyzeMultimodal(ctx context.Context, text string, imagePath string) (*domain.AIResponse, error) {
 	// imagePath bị bỏ qua - chỉ xử lý text thuần túy cho voice assistant
 
-	// Tạo prompt bắt buộc trả lời bằng tiếng Việt
-	prompt := fmt.Sprintf(`%s
+	// Tạo prompt với phong cách vui vẻ, hài hước, tự nhiên
+	prompt := fmt.Sprintf(`Bạn là trợ lý AI thân thiện, vui vẻ, hài hước. Hãy trả lời câu hỏi sau:
 
-YÊU CẦU BẮT BUỘC: 
+"%s"
+
+YÊU CẦU:
 - Trả lời bằng tiếng Việt
-- Trả lời ngắn gọn, tự nhiên như giọng nói
-- TUYỆT ĐỐI KHÔNG dùng emoji, emoticon, hoặc ký tự đặc biệt
-- Chỉ dùng chữ cái, số và dấu câu thông thường`, text)
+- Phong cách: thân thiện, vui vẻ, hài hước, dễ thương
+- Trả lời ngắn gọn (1-3 câu), tự nhiên như giọng nói
+- KHÔNG dùng emoji, emoticon, ký tự đặc biệt
+- Có thể đùa cợt nhẹ nhàng, tạo cảm giác gần gũi
+- Nếu là yêu cầu điều khiển (bật/tắt đèn, quạt...), trả lời vui vẻ và xác nhận`, text)
 
 	// Sử dụng "ollama run" thay vì "ollama generate"
 	cmd := exec.CommandContext(ctx, "ollama", "run", o.Model, prompt)
