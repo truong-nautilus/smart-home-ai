@@ -1,12 +1,13 @@
 #!/usr/bin/env python3
 """
-Gesture detector - Nhận diện cử chỉ 2 ngón tay từ camera
+Gesture detector - Nhận diện cử chỉ 2 ngón tay từ camera (chạy ẩn, không hiển thị cửa sổ)
 Sử dụng MediaPipe Hands để detect số ngón tay
 """
 import cv2
 import mediapipe as mp
 import sys
 import time
+import os
 
 def count_fingers(hand_landmarks):
     """Đếm số ngón tay đang giơ lên"""
@@ -45,12 +46,13 @@ def main():
         print("ERROR: Cannot open camera", file=sys.stderr)
         sys.exit(1)
     
-    print("Waiting for 2 fingers gesture (no timeout)...", file=sys.stderr, flush=True)
+    print("Waiting for 2 fingers gesture...", file=sys.stderr, flush=True)
     
     detected = False
     frame_count = 0
     
-    # Tạo cửa sổ để hiển thị camera (giúp debug)
+    # Luôn hiển thị cửa sổ để dễ test
+    show_window = True
     window_name = "Gesture Detection - Show 2 fingers"
     cv2.namedWindow(window_name)
     
@@ -67,43 +69,44 @@ def main():
         rgb_frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
         results = hands.process(rgb_frame)
         
-        # Vẽ text lên frame
-        cv2.putText(frame, "Show 2 fingers to start", (10, 30), 
-                    cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 0), 2)
+        finger_count = 0
         
         if results.multi_hand_landmarks:
             for hand_landmarks in results.multi_hand_landmarks:
                 finger_count = count_fingers(hand_landmarks)
                 
-                # Vẽ số ngón tay lên frame
-                cv2.putText(frame, f"Fingers: {finger_count}", (10, 70), 
-                            cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 255, 0), 2)
-                
-                if frame_count % 10 == 0:  # Log mỗi 10 frames
+                # Log occasionally để biết script đang chạy
+                if frame_count % 30 == 0:  # Log mỗi 1 giây (30 frames)
                     print(f"Detected {finger_count} fingers", file=sys.stderr, flush=True)
                 
                 if finger_count == 2:
-                    cv2.putText(frame, "2 FINGERS DETECTED!", (10, 110), 
-                                cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 0), 2)
                     print("DETECTED_2_FINGERS", file=sys.stdout, flush=True)
                     detected = True
                     break
         
-        # Hiển thị frame
+        # Hiển thị frame với thông tin
+        cv2.putText(frame, "Show 2 fingers to start", (10, 30), 
+                    cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 255, 0), 2)
+        cv2.putText(frame, f"Fingers: {finger_count}", (10, 70), 
+                    cv2.FONT_HERSHEY_SIMPLEX, 0.7, (255, 255, 0), 2)
+        
+        if finger_count == 2:
+            cv2.putText(frame, "2 FINGERS DETECTED!", (10, 110), 
+                        cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 255, 0), 2)
+        
         cv2.imshow(window_name, frame)
         
-        if detected:
-            time.sleep(0.5)  # Hiển thị kết quả 0.5s trước khi đóng
-            break
-        
-        # Cho phép thoát bằng phím 'q'
         if cv2.waitKey(1) & 0xFF == ord('q'):
             break
         
-        # Giảm CPU usage
+        if detected:
+            break
+        
+        # Giảm CPU usage - chỉ process 20 fps thay vì 30 fps
         time.sleep(0.05)
     
-    cv2.destroyAllWindows()
+    if show_window:
+        cv2.destroyAllWindows()
     cap.release()
     hands.close()
     

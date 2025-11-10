@@ -4,6 +4,7 @@ import (
 	"context"
 	"log"
 	"os"
+	"time"
 
 	"github.com/joho/godotenv"
 	"github.com/truong-nautilus/smart-home-ai/internal/infrastructure/edgetts"
@@ -63,10 +64,22 @@ func main() {
 		consoleLogger,
 	)
 
-	// Thực thi
+	// Thực thi vô hạn - chạy liên tục
 	ctx := context.Background()
-	if err := assistant.Execute(ctx); err != nil {
-		consoleLogger.Error("Không thể thực thi trợ lý", err)
-		os.Exit(1)
+	consoleLogger.Info("🚀 Trợ lý AI đã sẵn sàng - chạy liên tục...")
+	consoleLogger.Info("📌 Nhấn Ctrl+C để thoát")
+
+	for {
+		if err := assistant.Execute(ctx); err != nil {
+			consoleLogger.Error("⚠️ Lỗi khi thực thi", err)
+			// Không thoát, tiếp tục chạy
+			consoleLogger.Info("🔄 Khởi động lại sau 2 giây...")
+			time.Sleep(2 * time.Second)
+			continue
+		}
+
+		// Nghỉ 1 giây trước khi chờ gesture tiếp theo
+		consoleLogger.Info("✨ Hoàn tất! Sẵn sàng cho lần tiếp theo...")
+		time.Sleep(1 * time.Second)
 	}
 }
