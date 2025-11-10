@@ -31,6 +31,8 @@ func (w *WhisperCPPRecognizer) Transcribe(ctx context.Context, audioPath string)
 	if w.Model != "" {
 		args = append(args, "-m", w.Model)
 	}
+	// Thêm language hint cho tiếng Việt
+	args = append(args, "-l", "vi")
 	args = append(args, "-f", audioPath)
 
 	cmd := exec.CommandContext(ctx, w.Binary, args...)

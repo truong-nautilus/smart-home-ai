@@ -5,6 +5,7 @@ import (
 	"context"
 	"fmt"
 	"os/exec"
+	"regexp"
 	"strings"
 
 	"github.com/truong-nautilus/smart-home-ai/internal/domain"
@@ -23,15 +24,18 @@ func New(model string) *OllamaClient {
 	return &OllamaClient{Model: model}
 }
 
-// AnalyzeMultimodal gọi Ollama với text + ảnh (phi3:mini không hỗ trợ multimodal, chỉ xử lý text)
+// AnalyzeMultimodal gọi Ollama với text (bỏ qua imagePath)
 func (o *OllamaClient) AnalyzeMultimodal(ctx context.Context, text string, imagePath string) (*domain.AIResponse, error) {
-	// Note: phi3:mini không hỗ trợ image input, chỉ xử lý text
-	// Để sử dụng multimodal, cần model như llava hoặc bakllava
+	// imagePath bị bỏ qua - chỉ xử lý text thuần túy cho voice assistant
 
 	// Tạo prompt bắt buộc trả lời bằng tiếng Việt
-	prompt := fmt.Sprintf(`Câu hỏi của người dùng: %s
+	prompt := fmt.Sprintf(`%s
 
-YÊU CẦU BẮT BUỘC: Bạn PHẢI trả lời bằng TIẾNG VIỆT. Không được sử dụng tiếng Anh hoặc bất kỳ ngôn ngữ nào khác. Hãy trả lời ngắn gọn, rõ ràng và hữu ích bằng tiếng Việt.`, text)
+YÊU CẦU BẮT BUỘC: 
+- Trả lời bằng tiếng Việt
+- Trả lời ngắn gọn, tự nhiên như giọng nói
+- TUYỆT ĐỐI KHÔNG dùng emoji, emoticon, hoặc ký tự đặc biệt
+- Chỉ dùng chữ cái, số và dấu câu thông thường`, text)
 
 	// Sử dụng "ollama run" thay vì "ollama generate"
 	cmd := exec.CommandContext(ctx, "ollama", "run", o.Model, prompt)
@@ -78,8 +82,27 @@ YÊU CẦU BẮT BUỘC: Bạn PHẢI trả lời bằng TIẾNG VIỆT. Không 
 		return nil, fmt.Errorf("ollama: không nhận được phản hồi")
 	}
 
+	// Loại bỏ emoji và ký tự đặc biệt
+	cleanResponse := removeEmoji(response)
+
 	return &domain.AIResponse{
-		Text:  response,
+		Text:  cleanResponse,
 		Model: o.Model,
 	}, nil
+}
+
+// removeEmoji loại bỏ emoji và ký tự đặc biệt từ text
+func removeEmoji(text string) string {
+	// Regex để loại bỏ emoji và các ký tự Unicode đặc biệt
+	emojiPattern := regexp.MustCompile(`[\x{1F600}-\x{1F64F}]|[\x{1F300}-\x{1F5FF}]|[\x{1F680}-\x{1F6FF}]|[\x{1F1E0}-\x{1F1FF}]|[\x{2600}-\x{26FF}]|[\x{2700}-\x{27BF}]|[\x{1F900}-\x{1F9FF}]|[\x{1FA70}-\x{1FAFF}]|[\x{FE00}-\x{FE0F}]|[\x{200D}]`)
+	cleaned := emojiPattern.ReplaceAllString(text, "")
+
+	// Loại bỏ markdown bold (**text**)
+	cleaned = strings.ReplaceAll(cleaned, "**", "")
+
+	// Loại bỏ khoảng trắng thừa
+	cleaned = strings.TrimSpace(cleaned)
+	cleaned = regexp.MustCompile(`\s+`).ReplaceAllString(cleaned, " ")
+
+	return cleaned
 }

@@ -7,13 +7,12 @@ Trợ lý AI voice-only chạy hoàn toàn local trên macOS, sử dụng:
 
 ## 🎯 Chức Năng
 
-1. **Nhấn ENTER** để bắt đầu ghi âm (chế độ press-to-record)
-2. **Nói câu hỏi** - ghi âm động (không giới hạn thời gian)
-3. **Nhấn ENTER lần nữa** để dừng ghi âm
-4. **Chuyển đổi giọng nói** thành văn bản (tiếng Việt) bằng Whisper.cpp
-5. **Phân tích** câu hỏi bằng Ollama (gemma2:2b)
-6. **Tổng hợp** phản hồi thành giọng nói tự nhiên bằng Edge TTS
-7. **Phát** âm thanh phản hồi
+1. **Nhấn SPACE** + Enter để bắt đầu ghi âm (chế độ push-to-talk)
+2. **Ghi âm 10 giây** từ microphone tích hợp
+3. **Chuyển đổi giọng nói** thành văn bản (tiếng Việt) bằng Whisper.cpp
+4. **Phân tích** câu hỏi bằng Ollama (gemma2:2b)
+5. **Tổng hợp** phản hồi thành giọng nói tự nhiên bằng Edge TTS
+6. **Phát** âm thanh phản hồi
 
 ## Stack Công Nghệ (100% Local)
 

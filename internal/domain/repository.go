@@ -6,6 +6,10 @@ import "context"
 type MediaCapturer interface {
 	CaptureImage(ctx context.Context, outputPath string) error
 	RecordAudio(ctx context.Context, outputPath string, duration int) error
+	// StartRecording bắt đầu ghi âm trong background, trả về context để dừng
+	StartRecording(ctx context.Context, outputPath string) (context.CancelFunc, error)
+	// StopRecording dừng ghi âm đang chạy
+	StopRecording() error
 	PlayAudio(ctx context.Context, audioPath string) error
 }
 
