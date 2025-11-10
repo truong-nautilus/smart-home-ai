@@ -6,7 +6,7 @@ import (
 	"os"
 
 	"github.com/joho/godotenv"
-	"github.com/truong-nautilus/smart-home-ai/internal/infrastructure/mactts"
+	"github.com/truong-nautilus/smart-home-ai/internal/infrastructure/edgetts"
 	"github.com/truong-nautilus/smart-home-ai/internal/infrastructure/media"
 	"github.com/truong-nautilus/smart-home-ai/internal/infrastructure/ollama"
 	"github.com/truong-nautilus/smart-home-ai/internal/infrastructure/whispercpp"
@@ -36,9 +36,10 @@ func main() {
 	}
 	aiClient := ollama.New(ollamaModel)
 
-	// MacTTS synthesizer (local text-to-speech)
-	macTTSVoice := os.Getenv("MACTTS_VOICE") // optional, ví dụ: "Alex", "Samantha"
-	synthesizer := mactts.New(macTTSVoice)
+	// Edge TTS synthesizer (Microsoft neural TTS - giọng rất tự nhiên)
+	edgeTTSVoice := os.Getenv("EDGE_TTS_VOICE") // vi-VN-HoaiMyNeural (nữ) hoặc vi-VN-NamMinhNeural (nam)
+	edgeTTSBin := os.Getenv("EDGE_TTS_BIN")     // optional
+	synthesizer := edgetts.New(edgeTTSVoice, edgeTTSBin)
 
 	// Use case
 	assistant := usecase.NewAssistantUseCase(

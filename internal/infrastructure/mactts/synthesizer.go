@@ -21,10 +21,17 @@ func New(voice string) *MacTTSSynthesizer {
 
 // Synthesize chuyển văn bản thành giọng nói và phát trực tiếp (outputPath bị bỏ qua vì `say` phát luôn)
 func (m *MacTTSSynthesizer) Synthesize(ctx context.Context, text string, outputPath string) (*domain.SpeechOutput, error) {
-	args := []string{}
-	if m.Voice != "" {
-		args = append(args, "-v", m.Voice)
+	// Sử dụng Linh - giọng tiếng Việt tự nhiên trên macOS
+	args := []string{
+		"-v", "Linh", // Giọng nữ tiếng Việt
+		"-r", "180", // Tốc độ nói 180 words/min (phù hợp tiếng Việt)
 	}
+
+	// Override nếu user chỉ định giọng khác trong .env
+	if m.Voice != "" && m.Voice != "Samantha" && m.Voice != "Alex" {
+		args[1] = m.Voice
+	}
+
 	args = append(args, text)
 
 	cmd := exec.CommandContext(ctx, "say", args...)
