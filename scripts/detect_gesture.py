@@ -100,13 +100,14 @@ def main():
             break
         
         if detected:
+            # Hiển thị kết quả 0.5 giây trước khi đóng
+            time.sleep(0.5)
             break
         
         # Giảm CPU usage - chỉ process 20 fps thay vì 30 fps
         time.sleep(0.05)
     
-    if show_window:
-        cv2.destroyAllWindows()
+    cv2.destroyAllWindows()
     cap.release()
     hands.close()
     
