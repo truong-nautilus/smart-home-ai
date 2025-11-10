@@ -8,8 +8,14 @@ import (
 	"github.com/truong-nautilus/smart-home-ai/internal/domain"
 )
 
+// GestureDetector phát hiện cử chỉ từ camera
+type GestureDetector interface {
+	WaitForTwoFingers(ctx context.Context) (bool, error)
+}
+
 // AssistantUseCase orchestrates the AI assistant workflow
 type AssistantUseCase struct {
+	gestureDetector   GestureDetector
 	mediaCapturer     domain.MediaCapturer
 	speechRecognizer  domain.SpeechRecognizer
 	aiAssistant       domain.AIAssistant
@@ -25,6 +31,7 @@ type Logger interface {
 
 // NewAssistantUseCase creates a new assistant use case
 func NewAssistantUseCase(
+	gestureDetector GestureDetector,
 	mediaCapturer domain.MediaCapturer,
 	speechRecognizer domain.SpeechRecognizer,
 	aiAssistant domain.AIAssistant,
@@ -32,6 +39,7 @@ func NewAssistantUseCase(
 	logger Logger,
 ) *AssistantUseCase {
 	return &AssistantUseCase{
+		gestureDetector:   gestureDetector,
 		mediaCapturer:     mediaCapturer,
 		speechRecognizer:  speechRecognizer,
 		aiAssistant:       aiAssistant,
@@ -52,21 +60,32 @@ func (uc *AssistantUseCase) Execute(ctx context.Context) error {
 	// Cleanup temp files on exit
 	defer uc.cleanup(imageFile, audioFile, replyFile)
 
-	// Step 1: Capture image
+	// Step 1: Wait for gesture trigger (chờ vô hạn)
+	uc.logger.Info("👋 Hãy giơ 2 ngón tay trước camera để bắt đầu (đang chờ...)...")
+	detected, err := uc.gestureDetector.WaitForTwoFingers(ctx)
+	if err != nil {
+		return fmt.Errorf("không thể phát hiện cử chỉ: %w", err)
+	}
+	if !detected {
+		return fmt.Errorf("không phát hiện được cử chỉ 2 ngón tay")
+	}
+	uc.logger.Info("✅ Đã phát hiện cử chỉ 2 ngón tay!")
+
+	// Step 2: Capture image
 	uc.logger.Info("🎥 Đang chụp ảnh từ camera...")
 	if err := uc.mediaCapturer.CaptureImage(ctx, imageFile); err != nil {
 		return fmt.Errorf("không thể chụp ảnh: %w", err)
 	}
 	uc.logger.Info("✅ Chụp ảnh thành công")
 
-	// Step 2: Record audio
+	// Step 3: Record audio
 	uc.logger.Info("🎤 Đang ghi âm từ microphone (5 giây)...")
 	if err := uc.mediaCapturer.RecordAudio(ctx, audioFile, audioDuration); err != nil {
 		return fmt.Errorf("không thể ghi âm: %w", err)
 	}
 	uc.logger.Info("✅ Ghi âm thành công")
 
-	// Step 3: Transcribe audio
+	// Step 4: Transcribe audio
 	uc.logger.Info("🧠 Đang chuyển giọng nói thành văn bản (whisper.cpp)...")
 	transcription, err := uc.speechRecognizer.Transcribe(ctx, audioFile)
 	if err != nil {
@@ -74,7 +93,7 @@ func (uc *AssistantUseCase) Execute(ctx context.Context) error {
 	}
 	uc.logger.Info(fmt.Sprintf("📝 Văn bản: \"%s\"", transcription.Text))
 
-	// Step 4: Analyze with AI
+	// Step 5: Analyze with AI
 	uc.logger.Info("🤖 Đang phân tích (ollama, mô hình local)...")
 	response, err := uc.aiAssistant.AnalyzeMultimodal(ctx, transcription.Text, imageFile)
 	if err != nil {
@@ -82,14 +101,14 @@ func (uc *AssistantUseCase) Execute(ctx context.Context) error {
 	}
 	uc.logger.Info(fmt.Sprintf("💬 Phản hồi AI: \"%s\"", response.Text))
 
-	// Step 5: Synthesize speech
+	// Step 6: Synthesize speech
 	uc.logger.Info("🔊 Đang tổng hợp giọng nói (sử dụng 'say' trên macOS)...")
 	if _, err := uc.speechSynthesizer.Synthesize(ctx, response.Text, replyFile); err != nil {
 		return fmt.Errorf("không thể tổng hợp giọng nói: %w", err)
 	}
 	uc.logger.Info("✅ Tổng hợp giọng nói thành công")
 
-	// Step 6: Play audio
+	// Step 7: Play audio
 	uc.logger.Info("🔈 Đang phát âm thanh phản hồi...")
 	if err := uc.mediaCapturer.PlayAudio(ctx, replyFile); err != nil {
 		return fmt.Errorf("không thể phát âm thanh: %w", err)

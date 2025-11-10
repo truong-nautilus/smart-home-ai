@@ -7,6 +7,7 @@ import (
 
 	"github.com/joho/godotenv"
 	"github.com/truong-nautilus/smart-home-ai/internal/infrastructure/edgetts"
+	"github.com/truong-nautilus/smart-home-ai/internal/infrastructure/gesture"
 	"github.com/truong-nautilus/smart-home-ai/internal/infrastructure/media"
 	"github.com/truong-nautilus/smart-home-ai/internal/infrastructure/ollama"
 	"github.com/truong-nautilus/smart-home-ai/internal/infrastructure/whispercpp"
@@ -41,12 +42,24 @@ func main() {
 	edgeTTSBin := os.Getenv("EDGE_TTS_BIN")     // optional
 	synthesizer := edgetts.New(edgeTTSVoice, edgeTTSBin)
 
+	// Gesture detector (MediaPipe hand tracking)
+	var gestureDetector usecase.GestureDetector
+
+	// Nếu ENABLE_GESTURE=false, bỏ qua gesture detection
+	enableGesture := os.Getenv("ENABLE_GESTURE")
+	if enableGesture == "false" {
+		gestureDetector = gesture.NewNoOpDetector() // Luôn trả về true
+	} else {
+		gestureDetector = gesture.NewDetector("./scripts/detect_gesture.py")
+	}
+
 	// Use case
 	assistant := usecase.NewAssistantUseCase(
-		ffmpeg,      // media capturer
-		recognizer,  // speech recognizer (whisper.cpp)
-		aiClient,    // ai assistant (ollama)
-		synthesizer, // speech synthesizer (MacTTS)
+		gestureDetector, // gesture detector (MediaPipe)
+		ffmpeg,          // media capturer
+		recognizer,      // speech recognizer (whisper.cpp)
+		aiClient,        // ai assistant (ollama)
+		synthesizer,     // speech synthesizer (Edge TTS)
 		consoleLogger,
 	)
 
