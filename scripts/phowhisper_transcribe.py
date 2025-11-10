@@ -25,7 +25,7 @@ def transcribe_audio(audio_path: str) -> str:
         
         # Load PhoWhisper model
         # Model này được tối ưu cho tiếng Việt, cho kết quả tốt hơn Whisper gốc
-        model_id = "vinai/PhoWhisper-small"
+        model_id = os.getenv("PHOWHISPER_MODEL", "vinai/PhoWhisper-small")
         
         pipe = pipeline(
             "automatic-speech-recognition",
