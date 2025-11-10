@@ -27,9 +27,11 @@ func New(model string) *OllamaClient {
 func (o *OllamaClient) AnalyzeMultimodal(ctx context.Context, text string, imagePath string) (*domain.AIResponse, error) {
 	// Note: phi3:mini không hỗ trợ image input, chỉ xử lý text
 	// Để sử dụng multimodal, cần model như llava hoặc bakllava
-	
-	// Tạo prompt đơn giản chỉ với text
-	prompt := fmt.Sprintf("Câu hỏi của người dùng: %s\n\nHãy trả lời ngắn gọn và hữu ích.", text)
+
+	// Tạo prompt bắt buộc trả lời bằng tiếng Việt
+	prompt := fmt.Sprintf(`Câu hỏi của người dùng: %s
+
+YÊU CẦU BẮT BUỘC: Bạn PHẢI trả lời bằng TIẾNG VIỆT. Không được sử dụng tiếng Anh hoặc bất kỳ ngôn ngữ nào khác. Hãy trả lời ngắn gọn, rõ ràng và hữu ích bằng tiếng Việt.`, text)
 
 	// Sử dụng "ollama run" thay vì "ollama generate"
 	cmd := exec.CommandContext(ctx, "ollama", "run", o.Model, prompt)
@@ -37,7 +39,7 @@ func (o *OllamaClient) AnalyzeMultimodal(ctx context.Context, text string, image
 	if err != nil {
 		return nil, fmt.Errorf("ollama: stdout pipe: %w", err)
 	}
-	
+
 	stderr, err := cmd.StderrPipe()
 	if err != nil {
 		return nil, fmt.Errorf("ollama: stderr pipe: %w", err)
