@@ -1,0 +1,48 @@
+# Binaries
+smart-home-ai
+tro-ly-thong-minh
+main
+*.exe
+*.dll
+*.so
+*.dylib
+
+# Test binary
+*.test
+
+# Output of the go coverage tool
+*.out
+
+# Environment variables
+.env
+.env.local
+
+# Temporary media files - tiếng Anh
+frame.jpg
+audio.wav
+reply.mp3
+
+# Temporary media files - tiếng Việt
+hinh-anh.jpg
+am-thanh.wav
+tra-loi.mp3
+
+# Media files
+*.jpg
+*.wav
+*.mp3
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Go workspace
+go.work
+go.work.sum
