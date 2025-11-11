@@ -1,14 +1,13 @@
-# 🎙️ Trợ Lý AI Giọng Nói Vui Vẻ (Local)# 🎙️ Trợ Lý AI Giọng Nói Vui Vẻ (Local)
+# 🎙️ Trợ Lý AI Thông Minh với Video Analysis
 
+> **NEW 🎥**: Giờ đây hỗ trợ phân tích video liên tục từ RTSP camera!
 
+Trợ lý AI **phong cách thân thiện, vui vẻ, hài hước** chạy hoàn toàn local trên macOS với khả năng:
 
-Trợ lý AI voice-only **phong cách thân thiện, vui vẻ, hài hước** chạy hoàn toàn local trên macOS:Trợ lý AI voice-only **phong cách thân thiện, vui vẻ, hài hước** chạy hoàn toàn local trên macOS:
-
-- 🎯 **PhoWhisper** (vinai/PhoWhisper-small 157M) - Nhận dạng tiếng Việt tối ưu- 🎯 **PhoWhisper** (vinai/PhoWhisper-small 157M) - Nhận dạng tiếng Việt tối ưu
-
-- 🤖 **Ollama** (gemma2:2b) - AI trả lời vui nhộn, tự nhiên- 🤖 **Ollama** (gemma2:2b) - AI trả lời vui nhộn, tự nhiên
-
-- 🗣️ **Edge TTS** (Microsoft Neural) - Giọng nói như người thật- 🗣️ **Edge TTS** (Microsoft Neural) - Giọng nói như người thật
+- 🎯 **PhoWhisper** (vinai/PhoWhisper-small 157M) - Nhận dạng tiếng Việt tối ưu
+- 🤖 **Ollama** (gemma2:2b) - AI trả lời vui nhộn, tự nhiên
+- 🗣️ **Edge TTS** (Microsoft Neural) - Giọng nói như người thật
+- 🎥 **RTSP Video Analysis** - Phân tích video camera IP liên tục
 
 
 
@@ -28,11 +27,19 @@ Trợ lý AI voice-only **phong cách thân thiện, vui vẻ, hài hước** ch
 
 
 
-### 🎯 Phong Cách Giao Tiếp### 🎯 Phong Cách Giao Tiếp
+### � NEW: RTSP Video Analysis
+- **Camera IP Support**: Kết nối với camera qua RTSP (Tapo, Hikvision, v.v.)
+- **Continuous Analysis**: Tự động phân tích video mỗi 10 giây
+- **AI Description**: Mô tả những gì đang xảy ra trong video
+- **Background Processing**: Chạy song song với voice assistant
+- **Local & Private**: 100% xử lý trên máy, không upload cloud
 
-- ✅ **Thân thiện, gần gũi** - Như bạn bè tâm sự- ✅ **Thân thiện, gần gũi** - Như bạn bè tâm sự
+📚 **Docs**: [Quick Start](./docs/RTSP_QUICKSTART.md) | [Chi tiết](./docs/RTSP_VIDEO_ANALYSIS.md) | [Implementation](./docs/RTSP_IMPLEMENTATION_COMPLETE.md)
 
-- ✅ **Vui vẻ, hài hước** - Có thể đùa cợt nhẹ nhàng- ✅ **Vui vẻ, hài hước** - Có thể đùa cợt nhẹ nhàng
+### 🎯 Phong Cách Giao Tiếp
+
+- ✅ **Thân thiện, gần gũi** - Như bạn bè tâm sự
+- ✅ **Vui vẻ, hài hước** - Có thể đùa cợt nhẹ nhàng
 
 - ✅ **Tự nhiên** - Không cứng nhắc, không formal- ✅ **Tự nhiên** - Không cứng nhắc, không formal
 

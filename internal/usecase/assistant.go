@@ -22,6 +22,7 @@ type AssistantUseCase struct {
 	aiAssistant       domain.AIAssistant
 	speechSynthesizer domain.SpeechSynthesizer
 	keyboardListener  KeyboardListener
+	videoAnalyzer     domain.VideoAnalyzer // Optional: for continuous video analysis
 	logger            Logger
 }
 
@@ -46,8 +47,29 @@ func NewAssistantUseCase(
 		aiAssistant:       aiAssistant,
 		speechSynthesizer: speechSynthesizer,
 		keyboardListener:  keyboardListener,
+		videoAnalyzer:     nil, // Will be set separately if needed
 		logger:            logger,
 	}
+}
+
+// SetVideoAnalyzer sets the video analyzer for continuous video monitoring
+func (uc *AssistantUseCase) SetVideoAnalyzer(videoAnalyzer domain.VideoAnalyzer) {
+	uc.videoAnalyzer = videoAnalyzer
+}
+
+// StartContinuousVideoAnalysis starts continuous video analysis in background
+// This runs in a separate goroutine and analyzes video every intervalSec seconds
+func (uc *AssistantUseCase) StartContinuousVideoAnalysis(ctx context.Context, intervalSec int) error {
+	if uc.videoAnalyzer == nil {
+		return fmt.Errorf("video analyzer not configured")
+	}
+
+	// Start continuous analysis with a callback that logs the results
+	callback := func(description string) {
+		uc.logger.Info(fmt.Sprintf("📺 Video: %s", description))
+	}
+
+	return uc.videoAnalyzer.StartContinuousAnalysis(ctx, intervalSec, callback)
 }
 
 // Execute runs the complete AI assistant workflow (hold-space voice mode)

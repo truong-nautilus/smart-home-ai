@@ -27,3 +27,11 @@ type AIAssistant interface {
 type SpeechSynthesizer interface {
 	Synthesize(ctx context.Context, text string, outputPath string) (*SpeechOutput, error)
 }
+
+// VideoAnalyzer captures and analyzes video from RTSP stream
+type VideoAnalyzer interface {
+	// CaptureFrame captures a single frame from RTSP stream
+	CaptureFrame(ctx context.Context, outputPath string) error
+	// StartContinuousAnalysis starts continuous video analysis loop
+	StartContinuousAnalysis(ctx context.Context, interval int, callback func(description string)) error
+}

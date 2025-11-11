@@ -12,6 +12,7 @@ import (
 	"github.com/truong-nautilus/smart-home-ai/internal/infrastructure/media"
 	"github.com/truong-nautilus/smart-home-ai/internal/infrastructure/ollama"
 	"github.com/truong-nautilus/smart-home-ai/internal/infrastructure/phowhisper"
+	"github.com/truong-nautilus/smart-home-ai/internal/infrastructure/video"
 	"github.com/truong-nautilus/smart-home-ai/internal/infrastructure/wav2vec2"
 	"github.com/truong-nautilus/smart-home-ai/internal/usecase"
 	"github.com/truong-nautilus/smart-home-ai/pkg/logger"
@@ -66,6 +67,13 @@ func main() {
 	// Keyboard listener (Space key để ghi âm)
 	keyboardListener := keyboard.NewListener()
 
+	// RTSP Video Analyzer (continuous video analysis every 20 seconds)
+	rtspURL := os.Getenv("RTSP_URL")
+	if rtspURL == "" {
+		rtspURL = "rtsp://obstinate:Tapo%402024@192.168.1.186:554/stream1" // Default RTSP URL
+	}
+	videoAnalyzer := video.NewRTSPAnalyzer(rtspURL, aiClient, consoleLogger)
+
 	// Use case (với keyboard listener)
 	var assistant *usecase.AssistantUseCase
 	if wav2vec2Recognizer != nil {
@@ -88,11 +96,35 @@ func main() {
 		)
 	}
 
-	// Thực thi vô hạn - chế độ press twice
+	// Set video analyzer for continuous monitoring
+	assistant.SetVideoAnalyzer(videoAnalyzer)
+
+	// Context cho toàn bộ ứng dụng
 	ctx := context.Background()
 	consoleLogger.Info("🚀 Trợ lý AI đã sẵn sàng!")
 	consoleLogger.Info("📌 Cách dùng: Nhấn ENTER lần 1 → ghi âm → nhấn ENTER lần 2 → xử lý")
+	consoleLogger.Info("🎥 Video RTSP sẽ được phân tích liên tục mỗi 20 giây")
+	consoleLogger.Info("🖼️  Mỗi frame phân tích sẽ hiển thị trong Preview app")
 	consoleLogger.Info("🛑 Nhấn Ctrl+C để thoát")
+
+	// Kiểm tra biến môi trường SHOW_VIDEO_PREVIEW để hiển thị live video
+	showVideoPreview := os.Getenv("SHOW_VIDEO_PREVIEW")
+	if showVideoPreview == "true" || showVideoPreview == "1" {
+		consoleLogger.Info("📺 Mở cửa sổ video preview...")
+		// Chạy video preview trong goroutine riêng (không blocking)
+		go func() {
+			if err := videoAnalyzer.ShowVideoPreview(ctx); err != nil {
+				consoleLogger.Error("⚠️ Lỗi video preview", err)
+			}
+		}()
+	}
+
+	// Chạy continuous video analysis trong goroutine riêng
+	go func() {
+		if err := assistant.StartContinuousVideoAnalysis(ctx, 20); err != nil {
+			consoleLogger.Error("❌ Lỗi video analysis", err)
+		}
+	}()
 
 	for {
 		if err := assistant.Execute(ctx); err != nil {
