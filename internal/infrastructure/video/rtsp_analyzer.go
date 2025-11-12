@@ -124,8 +124,17 @@ func (r *RTSPAnalyzer) analyzeFrame(ctx context.Context, callback func(descripti
 	// Bỏ log để giảm nhiễu
 	// r.logger.Info("🧠 Đang phân tích nội dung video...")
 
-	// Phân tích frame bằng AI
-	prompt := "Mô tả ngắn gọn những gì bạn thấy trong video này. Hãy chỉ ra các đối tượng, hành động, và môi trường quan trọng."
+	// Phân tích frame bằng AI - tập trung vào nhân vật và hành động
+	prompt := `Phân tích ảnh và CHỈ trả lời theo format sau:
+
+Nếu CÓ NGƯỜI:
+"Có [số lượng] người. Họ đang [hành động cụ thể]."
+Ví dụ: "Có 2 người. Họ đang ngồi làm việc trên laptop."
+
+Nếu KHÔNG CÓ NGƯỜI:
+"Không có người trong khung hình."
+
+KHÔNG thêm bất kỳ câu hỏi hay lời nói thêm nào khác.`
 	response, err := r.aiAssistant.AnalyzeMultimodal(ctx, prompt, frameFile)
 	if err != nil {
 		return fmt.Errorf("không thể phân tích frame: %w", err)

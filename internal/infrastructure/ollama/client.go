@@ -3,7 +3,10 @@ package ollama
 import (
 	"bufio"
 	"context"
+	"encoding/base64"
+	"encoding/json"
 	"fmt"
+	"os"
 	"os/exec"
 	"regexp"
 	"strings"
@@ -24,12 +27,55 @@ func New(model string) *OllamaClient {
 	return &OllamaClient{Model: model}
 }
 
-// AnalyzeMultimodal gọi Ollama với text (bỏ qua imagePath)
+// AnalyzeMultimodal gọi Ollama với text và image (nếu có)
 func (o *OllamaClient) AnalyzeMultimodal(ctx context.Context, text string, imagePath string) (*domain.AIResponse, error) {
-	// imagePath bị bỏ qua - chỉ xử lý text thuần túy cho voice assistant
+	var prompt string
+	var cmd *exec.Cmd
 
-	// Tạo prompt với phong cách vui vẻ, hài hước, tự nhiên
-	prompt := fmt.Sprintf(`Bạn là trợ lý AI thân thiện, vui vẻ, hài hước. Hãy trả lời câu hỏi sau:
+	// Nếu có imagePath, sử dụng vision model với ảnh
+	if imagePath != "" {
+		// Đọc và encode ảnh thành base64
+		imageData, err := os.ReadFile(imagePath)
+		if err != nil {
+			return nil, fmt.Errorf("không thể đọc ảnh: %w", err)
+		}
+		base64Image := base64.StdEncoding.EncodeToString(imageData)
+
+		// Tạo JSON request cho Ollama API với vision
+		type Message struct {
+			Role    string   `json:"role"`
+			Content string   `json:"content"`
+			Images  []string `json:"images,omitempty"`
+		}
+		type Request struct {
+			Model    string    `json:"model"`
+			Messages []Message `json:"messages"`
+			Stream   bool      `json:"stream"`
+		}
+
+		reqData := Request{
+			Model: "gemma2:2b", // Model hỗ trợ vision
+			Messages: []Message{
+				{
+					Role:    "user",
+					Content: text,
+					Images:  []string{base64Image},
+				},
+			},
+			Stream: false,
+		}
+
+		jsonData, err := json.Marshal(reqData)
+		if err != nil {
+			return nil, fmt.Errorf("không thể tạo JSON request: %w", err)
+		}
+
+		// Gọi Ollama API qua curl
+		cmd = exec.CommandContext(ctx, "curl", "-s", "http://localhost:11434/api/chat",
+			"-d", string(jsonData))
+	} else {
+		// Không có ảnh - xử lý text thuần túy cho voice assistant
+		prompt = fmt.Sprintf(`Bạn là trợ lý AI thân thiện, vui vẻ, hài hước. Hãy trả lời câu hỏi sau:
 
 "%s"
 
@@ -41,8 +87,9 @@ YÊU CẦU:
 - Có thể đùa cợt nhẹ nhàng, tạo cảm giác gần gũi
 - Nếu là yêu cầu điều khiển (bật/tắt đèn, quạt...), trả lời vui vẻ và xác nhận`, text)
 
-	// Sử dụng "ollama run" thay vì "ollama generate"
-	cmd := exec.CommandContext(ctx, "ollama", "run", o.Model, prompt)
+		cmd = exec.CommandContext(ctx, "ollama", "run", o.Model, prompt)
+	}
+
 	out, err := cmd.StdoutPipe()
 	if err != nil {
 		return nil, fmt.Errorf("ollama: stdout pipe: %w", err)
@@ -84,6 +131,20 @@ YÊU CẦU:
 	response := strings.TrimSpace(sb.String())
 	if response == "" {
 		return nil, fmt.Errorf("ollama: không nhận được phản hồi")
+	}
+
+	// Nếu có ảnh, parse JSON response từ API
+	if imagePath != "" {
+		type Response struct {
+			Message struct {
+				Content string `json:"content"`
+			} `json:"message"`
+		}
+		var apiResp Response
+		if err := json.Unmarshal([]byte(response), &apiResp); err != nil {
+			return nil, fmt.Errorf("không thể parse JSON response: %w", err)
+		}
+		response = apiResp.Message.Content
 	}
 
 	// Loại bỏ emoji và ký tự đặc biệt
