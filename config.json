@@ -1,0 +1,64 @@
+{
+  "devices": {
+    "lights": {
+      "phong_khach": {
+        "type": "tapo",
+        "model": "L530",
+        "ip": "192.168.1.10",
+        "name": "Đèn Phòng Khách"
+      },
+      "phong_ngu": {
+        "type": "tapo",
+        "model": "L530",
+        "ip": "192.168.1.11",
+        "name": "Đèn Phòng Ngủ"
+      },
+      "bep": {
+        "type": "mqtt",
+        "topic": "home/kitchen/light",
+        "name": "Đèn Bếp"
+      }
+    },
+    "switches": {
+      "quat_phong_khach": {
+        "type": "tapo",
+        "model": "P100",
+        "ip": "192.168.1.20",
+        "name": "Quạt Phòng Khách"
+      }
+    },
+    "ir_devices": {
+      "dieu_hoa_phong_khach": {
+        "type": "broadlink",
+        "device_ip": "192.168.1.30",
+        "commands": {
+          "on": "260050000001...",
+          "off": "260050000001...",
+          "temp_18": "260050000001...",
+          "temp_26": "260050000001..."
+        },
+        "name": "Điều Hòa Phòng Khách"
+      }
+    },
+    "vacuum": {
+      "robot_hut_bui": {
+        "type": "xiaomi",
+        "ip": "192.168.1.40",
+        "name": "Robot Hút Bụi"
+      }
+    }
+  },
+  "claude": {
+    "model": "claude-3-5-sonnet-20241022",
+    "websocket_url": "wss://api.anthropic.com/v1/messages/streaming",
+    "max_tokens": 1024,
+    "temperature": 0.7,
+    "system_prompt": "Bạn là trợ lý thông minh Jarvis điều khiển nhà thông minh. Khi người dùng yêu cầu điều khiển thiết bị, hãy trả về JSON command với format: {\"action\": \"device_type.command\", \"device\": \"device_id\", \"value\": value}. Ví dụ: {\"action\": \"light.on\", \"device\": \"phong_khach\", \"value\": 100} để bật đèn phòng khách độ sáng 100%."
+  },
+  "audio": {
+    "sample_rate": 16000,
+    "channels": 1,
+    "bit_depth": 16,
+    "buffer_size": 3200
+  }
+}
